@@ -1,0 +1,19 @@
+Notas del equipo comercial sobre los clientes (resumen de visitas)
+
+Lácteos del Valle S.A.S. — planta en Cali. Recibe unos 25.000 litros de leche cruda al día de
+fincas de la región, en dos turnos. Produce leche pasteurizada en bolsa, yogur y kumis. Hoy
+pasteuriza en tanques por lotes (63 °C por 30 min) y quiere pasar a proceso continuo para subir
+productividad. Tiene un banco de hielo pequeño y en temporada seca el agua de servicio llega
+caliente. Le preocupa cumplir con el INVIMA y reducir el consumo de energía.
+
+Hilandería Andina S.A. — Medellín. Hila y tiñe algodón y mezclas de poliéster; la tintorería
+trabaja 24/7 con autoclaves de teñido a 130 °C y secadores que piden vapor saturado a 7 bar.
+Su caldera actual (90 BHP, carbón) se queda corta en picos y la autoridad ambiental le exige
+migrar a gas natural. Tiene sala de calderas propia; el agua de pozo es dura y el ablandador
+actual está viejo. Quiere bajar paradas no programadas.
+
+Laboratorios Biofarma Ltda. — Bogotá. Fabrica antibióticos inyectables y quiere producir
+vacunas veterinarias liofilizadas en viales para exportar. Trabaja en sala limpia grado B con
+buenas prácticas de manufactura (BPM/GMP) y auditorías de clientes del exterior. Lotes pequeños
+(unos 8.000 viales de 10 mL por ciclo) y alta exigencia en validación, trazabilidad de datos e
+integridad del registro electrónico. Bogotá está a 2.600 m s. n. m.

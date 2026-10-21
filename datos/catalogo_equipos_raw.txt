@@ -1,0 +1,43 @@
+catalogo interno - copiado de varios PDF del proveedor y notas del area tecnica (rev. sin fecha)
+NO usar como fuente oficial, falta validar algunos datos con fabrica
+
+
+#### pasteurizador placas modelo px3000 ####
+equipo de intercambio termico por placas en acero inox AISI 316L, 3 secciones (regeneracion / calentamiento / enfriamiento)
+capacidad nominal: 3.000 L/h (leche entera), se puede bajar a 2000 l/h con jugos de alta viscosidad
+temp. de pasteurizacion ajustable 72 a 85 °C   -- retencion 15 seg a 72°C (HTST)
+salida de producto enfriado: 4°C +/- 1
+regeneracion termica aprox 90%
+Potencia instalada 11 kW ; alimentacion 220/440V trifasico 60Hz
+presion max de trabajo 6 bar
+tolerancia control de temperatura: +- 0.5 °C (PLC + PT100)
+CIP integrado, valvula de desvio de flujo automatica si no se alcanza temp. minima
+nota tecnico (J.R.): ojo con el agua de servicio, pide agua helada a 2°C para llegar a 4°C de salida
+dimensiones 2.4 x 1.2 x 2.1 m , peso 980 kg en vacio
+
+
+-----------------
+CALDERA  -  CV150  (pirotubular, 3 pasos)
+Produccion vapor: 2.350 kg/h a 100°C equiv. --- 150 BHP
+Presion de diseño 150 psi / trabajo recomendado 125 psi (8.6 bar aprox)
+combustible gas natural o GLP, quemador modulante, consumo GN aprox 180 m3/h a plena carga
+eficiencia 85% (segun fabricante, combustion)
+motor ventilador quemador 7.5 HP + bomba alimentacion 3 HP -> 440V 3F
+temperatura gases chimenea < 230 °C
+requiere tratamiento de agua (dureza < 2 ppm), purga de fondo diaria !!
+tolerancia presostato de operacion: +/- 3 psi
+tiempo arranque en frio aprox 45 min
+** el cliente debe tener sala de calderas con ventilacion y operador certificado **
+
+
+---  LIOFILIZADOR LF 50 / grado farmaceutico ---
+area de bandejas 5 m2 (10 bandejas), carga de hielo 50 kg por ciclo
+temperatura de bandejas: -50 °C a +60 °C
+condensador: -75 °C (cascada), capacidad condensador 60 kg
+vacio final < 5 Pa (0,05 mbar)
+uniformidad temperatura entre bandejas: +/- 1 °C
+potencia total 38 kW, 380-440 V / 3 fases / 60 Hz
+camara y bandejas AISI 316L electropulido Ra < 0.4 um , diseño GMP, CIP/SIP (vapor limpio 121°C)
+registro de datos con audit trail (21 CFR part 11)
+ciclo tipico 24-72 h segun producto
+agua de enfriamiento: 15 m3/h a 25 °C max

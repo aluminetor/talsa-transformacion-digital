@@ -1,0 +1,44 @@
+[
+  {
+    "id_venta": "V-2026-0101",
+    "id_cliente": "CLI-001",
+    "empresa": "Lácteos del Valle S.A.S.",
+    "industria": "Alimentos y Bebidas",
+    "equipo_comprado": "Pasteurizador de placas PX-3000",
+    "fecha_venta": "2026-03-14",
+    "monto_usd": 48500.00,
+    "ubicacion": {
+      "ciudad": "Cali",
+      "departamento": "Valle del Cauca",
+      "pais": "Colombia"
+    }
+  },
+  {
+    "id_venta": "V-2026-0102",
+    "id_cliente": "CLI-002",
+    "empresa": "Hilandería Andina S.A.",
+    "industria": "Textil",
+    "equipo_comprado": "Caldera pirotubular CV-150",
+    "fecha_venta": "2026-05-02",
+    "monto_usd": 76200.00,
+    "ubicacion": {
+      "ciudad": "Medellín",
+      "departamento": "Antioquia",
+      "pais": "Colombia"
+    }
+  },
+  {
+    "id_venta": "V-2026-0103",
+    "id_cliente": "CLI-003",
+    "empresa": "Laboratorios Biofarma Ltda.",
+    "industria": "Farmacéutica",
+    "equipo_comprado": "Liofilizador industrial LF-50",
+    "fecha_venta": "2026-07-21",
+    "monto_usd": 132000.00,
+    "ubicacion": {
+      "ciudad": "Bogotá",
+      "departamento": "Cundinamarca",
+      "pais": "Colombia"
+    }
+  }
+]
