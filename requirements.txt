@@ -1,0 +1,7 @@
+# Pipeline de Datos, Generación PDF e Integración de IA - TALSA
+google-genai>=2.32.0
+pydantic>=2.10.0
+pandas>=2.2.0
+fpdf2>=2.8.0
+python-dotenv>=1.0.0
+pytest>=8.0.0

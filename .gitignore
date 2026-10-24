@@ -1,4 +1,32 @@
-.venv/
-__pycache__/
-.pytest_cache/
+# Variables de entorno y secretos (NUNCA versionar ni empaquetar)
 .env
+.env.*
+!.env.example
+
+# Entornos virtuales de Python
+.venv/
+venv/
+env/
+ENV/
+
+# Cachés de compilación y pruebas
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Archivos temporales y empaquetados locales
+*.tmp
+*.bak
+*.zip
+*.log
+
+# Metadatos del sistema operativo e IDEs
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

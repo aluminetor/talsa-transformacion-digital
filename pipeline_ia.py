@@ -37,6 +37,7 @@ from modulos.bi_export import (
     SALIDA_LOOKER_CSV,
     enriquecer_dataset,
     exportar_csv_bi,
+    notificar_n8n,
 )
 
 load_dotenv()
@@ -64,6 +65,8 @@ def main():
         print("\n=== 4. EXPORTACIÓN DE DATASET PARA LOOKER STUDIO ===")
         ruta_csv = exportar_csv_bi(df_enriquecido)
         print(f"   [BI] Dataset BI exportado en: {ruta_csv.name}\n")
+
+        notificar_n8n(df_enriquecido)
 
     except Exception as error_critico:
         print(f"\n[ERROR CRITICO] Fallo en el pipeline: {error_critico}")

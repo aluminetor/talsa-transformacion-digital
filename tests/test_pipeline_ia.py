@@ -1,21 +1,26 @@
-"""Pruebas unitarias para el pipeline de IA y ETL de TALSA."""
+"""Pruebas unitarias y de integración para el pipeline simplificado de TALSA."""
 
 import json
 from pathlib import Path
-import pytest
-import pandas as pd
+from types import SimpleNamespace
+from unittest.mock import MagicMock
 
+import pandas as pd
+import pytest
+
+import modulos.ia_cache as ia_cache
 from pipeline_ia import (
-    extraer_codigo_modelo,
-    extraer_tipo_equipo,
-    construir_dataset_maestro,
-    obtener_analisis_mock,
     AnalisisTecnicoIA,
-    cargar_cache,
-    guardar_cache,
     analizar_venta,
-    exportar_dataset,
-    SALIDA_DIR,
+    cargar_cache,
+    cargar_ventas,
+    construir_dataset_maestro,
+    enriquecer_dataset,
+    exportar_csv_bi,
+    extraer_codigo_modelo,
+    generar_hash_consulta,
+    generar_pdf_venta,
+    obtener_analisis_mock,
 )
 
 
@@ -26,81 +31,92 @@ def test_extraer_codigo_modelo():
     assert extraer_codigo_modelo("") == "DESCONOCIDO"
 
 
-def test_extraer_tipo_equipo():
-    assert extraer_tipo_equipo("Pasteurizador de placas PX-3000") == "Pasteurizador"
-    assert extraer_tipo_equipo("Caldera pirotubular CV-150") == "Caldera"
-    assert extraer_tipo_equipo("") == "Equipo Industrial"
-
-
-def test_esquema_pydantic_mock():
-    analisis = obtener_analisis_mock("PX3000")
-    assert isinstance(analisis, AnalisisTecnicoIA)
-    assert 0 <= analisis.score_compatibilidad <= 100
-    assert analisis.complejidad_tecnica in ("Alto", "Medio", "Bajo")
-    assert len(analisis.casos_uso) >= 2
-    assert len(analisis.recomendaciones) >= 3
-
-
 def test_construir_dataset_maestro():
     df = construir_dataset_maestro()
     assert len(df) == 3
-    assert "codigo_modelo" in df.columns
-    assert "ficha_tecnica_raw" in df.columns
-    assert "perfil_cliente" in df.columns
+    assert list(df["codigo_modelo"]) == ["PX3000", "CV150", "LF50"]
     assert not df["ficha_tecnica_raw"].isna().any()
     assert not df["perfil_cliente"].isna().any()
 
 
-def test_cache_no_contaminada_con_mock(tmp_path: Path):
-    ruta_cache_prueba = tmp_path / "cache_test.json"
-    cache = cargar_cache(ruta_cache_prueba)
-    assert cache == {}
+def test_validaciones_ventas_duplicados_y_montos(tmp_path: Path):
+    venta_base = {
+        "id_venta": "V-2026-0101",
+        "id_cliente": "CLI-001",
+        "empresa": "Lácteos del Valle S.A.S.",
+        "industria": "Alimentos y Bebidas",
+        "equipo_comprado": "Pasteurizador de placas PX-3000",
+        "fecha_venta": "2026-03-14",
+        "monto_usd": 48500.0,
+        "ubicacion": {"ciudad": "Cali", "departamento": "Valle del Cauca", "pais": "Colombia"},
+    }
 
-    # Fila simulada
-    fila = pd.Series({
-        "id_venta": "TEST-001",
-        "codigo_modelo": "PX3000",
-        "empresa": "Test Inc",
-        "industria": "Láctea",
-        "ciudad": "Bogotá",
-        "departamento": "Cundinamarca",
-        "equipo_comprado": "Pasteurizador PX-3000",
-        "ficha_tecnica_raw": "Capacidad 3000 L/h",
-        "perfil_cliente": "Planta pequeña",
-    })
+    ruta_dup = tmp_path / "ventas_dup.json"
+    ruta_dup.write_text(json.dumps([venta_base, venta_base]), encoding="utf-8")
+    with pytest.raises(ValueError, match="duplicados"):
+        cargar_ventas(ruta_dup)
 
-    # Analizar con modo_sin_ia
-    analisis = analizar_venta(
-        fila=fila,
-        client=None,
-        cache=cache,
-        modo_sin_ia=True,
-        ruta_cache=ruta_cache_prueba,
-    )
+    ruta_monto = tmp_path / "ventas_monto.json"
+    ruta_monto.write_text(json.dumps([dict(venta_base, monto_usd=-10)]), encoding="utf-8")
+    with pytest.raises(ValueError, match="montos"):
+        cargar_ventas(ruta_monto)
+
+
+def test_esquema_pydantic_mock():
+    for codigo in ("PX3000", "CV150", "LF50"):
+        analisis = obtener_analisis_mock(codigo)
+        assert isinstance(analisis, AnalisisTecnicoIA)
+        assert 0 <= analisis.score_compatibilidad <= 100
+        assert analisis.complejidad_tecnica in ("Alto", "Medio", "Bajo")
+        assert 4 <= len(analisis.especificaciones_tabla) <= 7
+        assert 2 <= len(analisis.casos_uso) <= 4
+        assert 3 <= len(analisis.recomendaciones) <= 5
+
+
+def test_reintentos_pydantic_y_fallback_mock(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+    monkeypatch.setattr(ia_cache.time, "sleep", lambda _: None)
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    monkeypatch.setattr(ia_cache, "CACHE_FILE", tmp_path / "cache_test.json")
+
+    df = construir_dataset_maestro()
+    fila = df.iloc[0]
+    json_valido = obtener_analisis_mock("PX3000").model_dump_json()
+
+    cliente_mock = MagicMock()
+    cliente_mock.models.generate_content.side_effect = [
+        SimpleNamespace(text='{"json_incompleto": '),
+        RuntimeError("503 Service Unavailable"),
+        SimpleNamespace(text=json_valido),
+    ]
+    monkeypatch.setattr(ia_cache.genai, "Client", lambda **kwargs: cliente_mock)
+
+    cache = {}
+    analisis, origen = analizar_venta(fila, cache, modo_sin_ia=False)
+    assert origen == "IA"
     assert isinstance(analisis, AnalisisTecnicoIA)
-    # Verificar que NO se escribió en la caché
-    assert "TEST-001" not in cache
-    assert not ruta_cache_prueba.exists()
+    assert cliente_mock.models.generate_content.call_count == 3
+    assert fila["id_venta"] in cache
+
+    # Segunda llamada con mismos datos debe salir de CACHE sin llamar a la API
+    analisis_cache, origen_cache = analizar_venta(fila, cache, modo_sin_ia=False)
+    assert origen_cache == "CACHE"
+    assert cliente_mock.models.generate_content.call_count == 3
 
 
-def test_exportar_dataset(tmp_path: Path):
-    df_prueba = pd.DataFrame([
-        {
-            "id_venta": "V-TEST-1",
-            "empresa": "Empresa Test",
-            "score_compatibilidad": 90,
-            "complejidad_tecnica": "Bajo",
-            "justificacion_score": "Excelente ajuste",
-            "resumen_casos_uso": "Caso 1 | Caso 2",
-            "resumen_recomendaciones": "Presión: 5 bar",
-            "casos_uso_lista": ["Caso 1", "Caso 2"],
-        }
-    ])
-    ruta_salida = tmp_path / "ventas_analisis_completo.csv"
-    exportar_dataset(df_prueba, ruta_csv=ruta_salida)
+def test_pipeline_completo_pdf_y_csv_bi(tmp_path: Path):
+    df_maestro = construir_dataset_maestro()
+    df_enriquecido = enriquecer_dataset(df_maestro, modo_sin_ia=True)
+    assert len(df_enriquecido) == 3
 
-    assert ruta_salida.exists()
-    df_leido = pd.read_csv(ruta_salida, encoding="utf-8-sig")
-    assert len(df_leido) == 1
-    assert "casos_uso_lista" not in df_leido.columns  # Excluido para CSV plano
-    assert df_leido.iloc[0]["score_compatibilidad"] == 90
+    for _, fila in df_enriquecido.iterrows():
+        ruta_pdf = generar_pdf_venta(fila, salida_dir=tmp_path)
+        assert ruta_pdf.exists()
+        assert ruta_pdf.read_bytes().startswith(b"%PDF-")
+
+    ruta_csv = exportar_csv_bi(df_enriquecido, ruta_csv=tmp_path / "dataset_looker_studio.csv")
+    assert ruta_csv.exists()
+    df_bi = pd.read_csv(ruta_csv, encoding="utf-8-sig")
+    assert len(df_bi) == 3
+    assert "origen_analisis" in df_bi.columns
+    assert "casos_uso_lista" not in df_bi.columns
+    assert "ficha_tecnica_raw" not in df_bi.columns
