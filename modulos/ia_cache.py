@@ -17,7 +17,7 @@ CACHE_FILE = SALIDA_DIR / "cache_ia.json"
 MODELO_DEFAULT = "gemini-flash-lite-latest"
 
 
-# --- ESQUEMAS DE VALIDACIÓN PYDANTIC ---
+# esquemas Pydantic para validar la respuesta de Gemini
 class EspecificacionEquipo(BaseModel):
     parametro: str
     valor: str
@@ -38,7 +38,7 @@ class AnalisisTecnicoIA(BaseModel):
     complejidad_tecnica: Literal["Alto", "Medio", "Bajo"]
 
 
-# --- FUNCIONES DE CACHÉ Y RESPALDO ---
+# funciones encargadas de la caché y la consulta a Gemini
 def generar_hash_consulta(id_venta: str, modelo: str, ficha: str, perfil: str) -> str:
     """Crea una llave única basada en los datos de entrada para invalidar caché si algo cambia."""
     contenido = f"{id_venta}|{modelo}|{ficha.strip()}|{perfil.strip()}"
@@ -151,7 +151,7 @@ FICHA TÉCNICA:
 """.strip()
 
 
-# --- FUNCIÓN PRINCIPAL CON TRY/EXCEPT Y REINTENTOS ---
+# funcion principal que combina caché, reintentos y validación Pydantic
 def analizar_venta(
     fila: pd.Series,
     cache: Dict[str, Any],
@@ -159,6 +159,7 @@ def analizar_venta(
     modo_sin_ia: bool = False,
 ) -> Tuple[AnalisisTecnicoIA, str]:
     """
+    Analiza la compatibilidad técnica entre el equipo comprado y la planta del cliente.
     Devuelve (AnalisisTecnicoIA, origen_analisis) donde origen es 'IA', 'CACHE' o 'MOCK'.
     Incluye validación Pydantic dentro de los reintentos.
     """

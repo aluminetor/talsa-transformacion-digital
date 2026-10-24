@@ -10,7 +10,7 @@ DATOS_DIR = BASE_DIR / "datos"
 
 
 def extraer_codigo_modelo(texto: str) -> str:
-    """Extrae el código del modelo (ej. 'PX-3000' o 'px3000' -> 'PX3000')."""
+    """Extrae el código del modelo ejemplo "PX-3000" o "px3000" -> "PX3000"."""
     if not isinstance(texto, str):
         return "DESCONOCIDO"
     match = re.search(r"\b([A-Za-z]{2})[\s\-]*(\d{2,4})\b", texto)
