@@ -447,7 +447,7 @@ La suite en `tests/test_pipeline_ia.py` tiene **14 tests** que comprueban extrac
 
 | Elemento | Estado / enlace |
 |---|---|
-| Repositorio GitHub o GitLab | **Pendiente:** reemplazar esta celda con la URL real del repositorio publicado. |
+| Repositorio GitHub o GitLab | [Repositorio Talsa](https://github.com/aluminetor/talsa-transformacion-digital) |
 | Dashboard Looker Studio | [Dashboard TALSA en Looker Studio](https://datastudio.google.com/reporting/4778f074-a166-4442-ae63-384c8d901691) |
 | Archivos de salida | Carpeta [`salida/`](salida/) de este repositorio. |
 | Ejecución | `python pipeline_ia.py` o `python pipeline_ia.py --sin-ia`. |
