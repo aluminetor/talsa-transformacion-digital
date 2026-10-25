@@ -137,7 +137,7 @@ def obtener_analisis_mock(codigo_modelo: str) -> AnalisisTecnicoIA:
 
 
 def construir_prompt(fila: pd.Series) -> str:
-    """Construye el prompt con las instrucciones técnicas para Gemini."""
+    # Construye el prompt con las instrucciones técnicas para Gemini 
     return f"""
 Eres un ingeniero experto de TALSA. Analiza la compatibilidad entre el equipo vendido y la planta del cliente.
 Basa tu respuesta ÚNICAMENTE en los datos reales suministrados, sin inventar especificaciones.
