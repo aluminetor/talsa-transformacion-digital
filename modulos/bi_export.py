@@ -83,6 +83,9 @@ def exportar_csv_bi(df: pd.DataFrame, ruta_csv: Path = SALIDA_LOOKER_CSV) -> Pat
     df[columnas_bi].to_csv(ruta_csv, index=False, encoding="utf-8-sig")
     return ruta_csv
 
+# -----------------------------------------------------------
+# ----------------------------N8N---------------------------
+#--------------------------------------------------------------
 def _extraer_links_respuesta_n8n(raw_body: str) -> dict[str, str]:
     """Extrae un diccionario {id_venta: url_pdf} si n8n devuelve las filas o links generados."""
     links: dict[str, str] = {}
@@ -113,8 +116,6 @@ def _extraer_links_respuesta_n8n(raw_body: str) -> dict[str, str]:
     return links
 
 
-# Notifica a n8n
-#--------------------------------------------------------------
 def notificar_n8n(df: pd.DataFrame, ruta_csv: Path = SALIDA_LOOKER_CSV) -> bool:
     """
     Envía las filas del dataset BI y las rutas locales de los PDFs al Webhook de n8n
