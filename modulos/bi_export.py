@@ -13,6 +13,29 @@ SALIDA_DIR = BASE_DIR / "salida"
 SALIDA_LOOKER_CSV = SALIDA_DIR / "dataset_looker_studio.csv"
 
 
+def resolver_url_pdf(id_venta: str) -> str:
+    """
+    Resuelve la ruta o URL del PDF para el dataset BI usando:
+    1. TALSA_PDF_LINKS_MAP (JSON en .env con mapeo id_venta -> URL)
+    2. TALSA_PDF_BASE_URL (URL base en .env)
+    3. Ruta local por defecto: salida/ficha_<id_venta>.pdf
+    """
+    mapa_raw = os.getenv("TALSA_PDF_LINKS_MAP", "").strip()
+    if mapa_raw:
+        try:
+            mapa = json.loads(mapa_raw)
+            if isinstance(mapa, dict) and id_venta in mapa and str(mapa[id_venta]).strip():
+                return str(mapa[id_venta]).strip()
+        except Exception:
+            pass
+
+    base_url = os.getenv("TALSA_PDF_BASE_URL", "").strip().rstrip("/")
+    if base_url:
+        return f"{base_url}/ficha_{id_venta}.pdf"
+
+    return f"salida/ficha_{id_venta}.pdf"
+
+
 def enriquecer_dataset(
     df_maestro: pd.DataFrame,
     modelo: str = MODELO_DEFAULT,
@@ -23,11 +46,12 @@ def enriquecer_dataset(
     resultados = []
 
     for _, fila in df_maestro.iterrows():
+        id_venta = str(fila["id_venta"])
         analisis, origen = analizar_venta(fila, cache, modelo=modelo, modo_sin_ia=modo_sin_ia)
 
         resultados.append(
             {
-                "id_venta": fila["id_venta"],
+                "id_venta": id_venta,
                 "origen_analisis": origen,
                 "score_compatibilidad": analisis.score_compatibilidad,
                 "complejidad_tecnica": analisis.complejidad_tecnica,
@@ -39,7 +63,7 @@ def enriquecer_dataset(
                 "resumen_recomendaciones": " | ".join(
                     f"{r.parametro}: {r.valor_unidad} ({r.motivo})" for r in analisis.recomendaciones
                 ),
-                "archivo_ficha_pdf": f"salida/ficha_{fila['id_venta']}.pdf",
+                "archivo_ficha_pdf": resolver_url_pdf(id_venta),
             }
         )
 
@@ -59,12 +83,44 @@ def exportar_csv_bi(df: pd.DataFrame, ruta_csv: Path = SALIDA_LOOKER_CSV) -> Pat
     df[columnas_bi].to_csv(ruta_csv, index=False, encoding="utf-8-sig")
     return ruta_csv
 
+def _extraer_links_respuesta_n8n(raw_body: str) -> dict[str, str]:
+    """Extrae un diccionario {id_venta: url_pdf} si n8n devuelve las filas o links generados."""
+    links: dict[str, str] = {}
+    if not raw_body or not raw_body.strip():
+        return links
+    try:
+        parsed = json.loads(raw_body)
+    except Exception:
+        return links
+
+    items = parsed if isinstance(parsed, list) else [parsed]
+    if isinstance(parsed, dict) and isinstance(parsed.get("ventas"), list):
+        items = parsed["ventas"]
+
+    for entry in items:
+        if not isinstance(entry, dict):
+            continue
+        data_entry = entry.get("json", entry) if isinstance(entry.get("json"), dict) else entry
+        id_v = data_entry.get("id_venta")
+        url_pdf = (
+            data_entry.get("archivo_ficha_pdf")
+            or data_entry.get("webViewLink")
+            or data_entry.get("url_pdf")
+        )
+        if id_v and isinstance(url_pdf, str) and url_pdf.startswith(("http://", "https://")):
+            links[str(id_v)] = url_pdf.strip()
+
+    return links
+
+
 # Notifica a n8n
 #--------------------------------------------------------------
-def notificar_n8n(df: pd.DataFrame) -> bool:
+def notificar_n8n(df: pd.DataFrame, ruta_csv: Path = SALIDA_LOOKER_CSV) -> bool:
     """
     Envía las filas del dataset BI y las rutas locales de los PDFs al Webhook de n8n
-    si existe N8N_WEBHOOK_URL en el entorno. No interrumpe el pipeline si falla.
+    si existe N8N_WEBHOOK_URL en el entorno. Si n8n devuelve las URLs públicas de
+    Google Drive, actualiza automáticamente el DataFrame y el CSV de Looker Studio.
+    No interrumpe el pipeline si falla.
     """
     webhook_url = os.getenv("N8N_WEBHOOK_URL", "").strip()
     if not webhook_url:
@@ -108,9 +164,18 @@ def notificar_n8n(df: pd.DataFrame) -> bool:
             headers={"Content-Type": "application/json"},
             method="POST",
         )
-        with urllib.request.urlopen(req, timeout=10) as response:
+        with urllib.request.urlopen(req, timeout=30) as response:
             if 200 <= response.status < 300:
-                print("   [n8n] Evento enviado con éxito al Webhook de n8n.")
+                raw_resp = response.read().decode("utf-8", errors="ignore")
+                links_drive = _extraer_links_respuesta_n8n(raw_resp)
+                if links_drive:
+                    df["archivo_ficha_pdf"] = df["id_venta"].astype(str).map(
+                        lambda x: links_drive.get(x, df.loc[df["id_venta"].astype(str) == x, "archivo_ficha_pdf"].iloc[0])
+                    )
+                    exportar_csv_bi(df, ruta_csv=ruta_csv)
+                    print(f"   [n8n] {len(links_drive)} links de Google Drive recibidos y actualizados en {ruta_csv.name}.")
+                else:
+                    print("   [n8n] Evento enviado con éxito al Webhook de n8n.")
                 return True
     except Exception as e:
         print(f"   [n8n] Aviso: No se pudo conectar con n8n ({e}). Pipeline completado localmente.")
