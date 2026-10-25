@@ -120,3 +120,46 @@ def test_pipeline_completo_pdf_y_csv_bi(tmp_path: Path):
     assert "origen_analisis" in df_bi.columns
     assert "casos_uso_lista" not in df_bi.columns
     assert "ficha_tecnica_raw" not in df_bi.columns
+
+
+def test_n8n_actualiza_links_pdf_en_csv(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+    import modulos.bi_export as bi_export
+
+    monkeypatch.setenv("N8N_WEBHOOK_URL", "http://localhost:5678/webhook/talsa-bi")
+    df_maestro = construir_dataset_maestro()
+    df_enriquecido = enriquecer_dataset(df_maestro, modo_sin_ia=True)
+    ruta_csv = tmp_path / "dataset_looker_studio.csv"
+    exportar_csv_bi(df_enriquecido, ruta_csv=ruta_csv)
+
+    respuesta_simulada_n8n = json.dumps(
+        [
+            {"id_venta": "V-2026-0101", "archivo_ficha_pdf": "https://drive.google.com/file/d/101/view"},
+            {"id_venta": "V-2026-0102", "archivo_ficha_pdf": "https://drive.google.com/file/d/102/view"},
+            {"id_venta": "V-2026-0103", "archivo_ficha_pdf": "https://drive.google.com/file/d/103/view"},
+        ]
+    ).encode("utf-8")
+
+    class FakeResponse:
+        status = 200
+
+        def read(self):
+            return respuesta_simulada_n8n
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            pass
+
+    monkeypatch.setattr(bi_export.urllib.request, "urlopen", lambda *a, **kw: FakeResponse())
+
+    ok = bi_export.notificar_n8n(df_enriquecido, ruta_csv=ruta_csv)
+    assert ok is True
+
+    df_actualizado = pd.read_csv(ruta_csv, encoding="utf-8-sig")
+    assert list(df_actualizado["archivo_ficha_pdf"]) == [
+        "https://drive.google.com/file/d/101/view",
+        "https://drive.google.com/file/d/102/view",
+        "https://drive.google.com/file/d/103/view",
+    ]
+

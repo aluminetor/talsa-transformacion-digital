@@ -5,7 +5,10 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "talsa-bi",
-        "options": {}
+        "responseMode": "lastNode",
+        "options": {
+          "responseData": "allEntries"
+        }
       },
       "id": "1a2b3c4d-0001-0001-0001-000000000001",
       "name": "1. Webhook Pipeline Python",
