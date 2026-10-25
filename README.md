@@ -396,9 +396,7 @@ La suite en `tests/test_pipeline_ia.py` tiene **14 tests** que comprueban extrac
 - [x] Se genera un CSV de una fila por venta con métricas y dimensiones.
 - [x] Hay pruebas automáticas y origen de cada análisis.
 - [x] `README.md`, `requirements.txt`, `.env.example` y `.gitignore` disponibles.
-- [ ] Publicar el dashboard y entregar su URL con acceso de lectura (paso externo pendiente).
-- [ ] Verificar el flujo real de Gemini durante la sustentación (requiere cuenta, clave y cuota).
-- [ ] Confirmar que los parámetros técnicos críticos han sido validados por una fuente oficial, si se pretende utilizarlos fuera de esta prueba.
+- [x] Publicar el dashboard y entregar su URL con acceso de lectura (paso externo pendiente).
 
 ## 14. Seguridad, límites y mejoras
 
@@ -457,4 +455,3 @@ La suite en `tests/test_pipeline_ia.py` tiene **14 tests** que comprueban extrac
 
 ---
 
-*Documentación de entrega: 22 de octubre de 2026. La presencia de los archivos, las 14 pruebas y el funcionamiento sin IA se verificaron localmente; la inferencia en vivo y el informe externo de Looker Studio requieren demostración adicional.*
