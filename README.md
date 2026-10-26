@@ -1,11 +1,11 @@
 # TALSA | Transformación Digital: análisis técnico de ventas con IA
 
 > **Prueba técnica · Practicante de Transformación Digital (Datos e IA)**  
-> Python · pandas · Google Gemini · Pydantic · fpdf2 · Looker Studio
+> Python · pandas · Google Gemini · Pydantic · fpdf2 · n8n · Looker Studio
 
-Este proyecto transforma **tres fuentes comerciales y técnicas sin claves comunes** en informes de compatibilidad para cada venta, fichas PDF con identidad visual TALSA y un CSV preparado para analizar en Looker Studio.
+Este proyecto transforma **tres fuentes comerciales y técnicas sin claves comunes** en informes de compatibilidad para cada venta, fichas PDF con identidad visual TALSA y un CSV preparado para analizar en Looker Studio, con publicación opcional automatizada mediante **n8n** hacia Google Drive y Google Sheets.
 
-**En pocas palabras:** se lee lo que se vendió, se identifica la ficha del equipo, se recuperan las necesidades del cliente, se solicita o reutiliza un análisis técnico estructurado y se publican los resultados como archivos.
+**En pocas palabras:** se lee lo que se vendió, se identifica la ficha del equipo, se recuperan las necesidades del cliente, se solicita o reutiliza un análisis técnico estructurado y se publican los resultados como archivos locales y/o en la nube.
 
 > [!IMPORTANT]
 > Los datos del ejercicio son **ficticios**. El catálogo indica expresamente que algunas especificaciones están pendientes de validación con fábrica. Los resultados de IA, caché o simulación son **orientativos**, no sustituyen la validación de ingeniería, requisitos legales, manuales oficiales ni procedimientos de seguridad industrial.
@@ -23,7 +23,7 @@ Este proyecto transforma **tres fuentes comerciales y técnicas sin claves comun
 9. [Cómo funciona el análisis con IA](#9-cómo-funciona-el-análisis-con-ia)
 10. [Validaciones, reintentos y caché](#10-validaciones-reintentos-y-caché)
 11. [Fichas PDF y manual de marca](#11-fichas-pdf-y-manual-de-marca)
-12. [Dataset y dashboard de Looker Studio](#12-dataset-y-dashboard-de-looker-studio)
+12. [Dataset, automatización con n8n y dashboard de Looker Studio](#12-dataset-automatización-con-n8n-y-dashboard-de-looker-studio)
 13. [Pruebas y verificación](#13-pruebas-y-verificación)
 14. [Seguridad, límites y mejoras](#14-seguridad-límites-y-mejoras)
 15. [Problemas frecuentes](#15-problemas-frecuentes)
@@ -35,28 +35,27 @@ El problema de negocio es que las ventas (`JSON`), las especificaciones técnica
 
 El pipeline automatiza cinco tareas:
 
-1. **Ingesta y limpieza:** leer con Python y pandas; estandarizar textos, fechas, montos y unidades.
+1. **Ingesta y limpieza:** leer con Python y pandas; estandarizar textos, fechas y montos.
 2. **Cruce:** asociar cada venta con su modelo de equipo y su perfil de cliente **sin claves compartidas de origen**.
-3. **Enriquecimiento:** producir especificaciones, casos de uso, recomendaciones, compatibilidad (0–100) y complejidad (`Alto`, `Medio`, `Bajo`) con Gemini o, en modo local, con ejemplos simulados.
+3. **Enriquecimiento:** producir especificaciones, casos de uso, recomendaciones, compatibilidad (0–100) y complejidad (`Alto`, `Medio`, `Bajo`) con Gemini o, en modo local, con ejemplos simulados (`MOCK`).
 4. **Documentación:** generar **un PDF por venta**, tabulado y con los colores y el logotipo de TALSA.
-5. **BI:** construir un dataset de **una fila por venta** para métricas, gráficos y filtros de Looker Studio.
+5. **BI y Automatización:** construir un dataset de **una fila por venta** para métricas, gráficos y filtros de Looker Studio, y sincronizar opcionalmente los PDFs y registros mediante un Webhook de **n8n** con Google Drive y Google Sheets.
 
 Los tres equipos contemplados por los datos de la prueba son **PX-3000** (pasteurizador), **CV-150** (caldera) y **LF-50** (liofilizador).
 
 ## 2. Resultados esperados y estado de entrega
 
-En `salida/` se incluyen los archivos generados:
+En `salida/` se incluyen los archivos generados por el pipeline:
 
 | Archivo | Para qué sirve |
 |---|---|
 | `ficha_V-2026-0101.pdf` | Ficha de la venta del pasteurizador PX-3000. |
 | `ficha_V-2026-0102.pdf` | Ficha de la venta de la caldera CV-150. |
 | `ficha_V-2026-0103.pdf` | Ficha de la venta del liofilizador LF-50. |
-| `dataset_looker_studio.csv` | Datos resumidos y tipados para el tablero de Looker Studio. |
-| `ventas_analisis_completo.csv` | Exportación extendida para auditoría y trazabilidad. |
-| `cache_ia.json` | Respuestas reutilizables cuya validez depende del hash de los insumos. |
+| `dataset_looker_studio.csv` | Datos resumidos y tipados (19 columnas) para el tablero de Looker Studio. |
+| `cache_ia.json` | Respuestas reutilizables cuya validez depende del hash SHA-256 de los insumos. |
 
-**Comprobación del proyecto revisado:** 3 ventas, 3 PDFs de una página, 3 filas y 24 columnas en el CSV de Looker Studio; **14 pruebas de `pytest` aprobadas**. La ejecución local sin IA también se verificó de extremo a extremo.
+**Comprobación del proyecto revisado:** 3 ventas, 3 PDFs de una página, 3 filas y 19 columnas en el CSV de Looker Studio; **7 pruebas de `pytest` aprobadas** (incluyendo el flujo completo e integración con n8n). La ejecución local sin IA también se verificó de extremo a extremo.
 
 **Estado del dashboard:** el código y el CSV están preparados para Looker Studio. El tablero interactivo publicado se encuentra disponible en: [Dashboard TALSA en Looker Studio](https://datastudio.google.com/reporting/4778f074-a166-4442-ae63-384c8d901691).
 
@@ -68,10 +67,11 @@ En `salida/` se incluyen los archivos generados:
 | `pandas` | Lectura, transformación, cruce y exportación tabular. |
 | `google-genai` | Cliente oficial para Google Gemini. |
 | `pydantic` | Validación de la estructura JSON devuelta por IA. |
-| `fpdf2` | Diseño y creación de fichas PDF. |
+| `fpdf2` | Diseño y creación de fichas PDF corporativas. |
 | `python-dotenv` | Lectura local de variables de entorno desde `.env`. |
-| `pytest` | Pruebas automatizadas. |
-| Looker Studio | Visualización del CSV; se configura fuera del proyecto. |
+| `pytest` | Pruebas automatizadas unitarias y de integración. |
+| `n8n` (opcional) | Orquestación para subir PDFs a Google Drive y actualizar Google Sheets. |
+| Looker Studio | Visualización del dataset BI. |
 
 Necesitas **Python** instalado, acceso a una terminal y, **solo para ejecutar Gemini en vivo**, conexión a Internet y una clave válida de Google AI Studio. No se requiere base de datos. No uses el entorno virtual de otra persona; créalo en tu computadora.
 
@@ -85,10 +85,12 @@ talsa-transformacion-digital/
 │   └── perfil_cliente_contexto.txt    # Necesidades operativas de clientes
 ├── modulos/
 │   ├── etl.py                         # Extracción, limpieza, cruces y controles
-│   ├── ia_cache.py                    # Prompt, Gemini, esquemas, reintentos y caché
-│   ├── pdf_generator.py               # Renderizado de fichas corporativas
-│   ├── bi_export.py                   # Dataset para BI, enlaces y ZIP seguro
+│   ├── ia_cache.py                    # Prompt, Gemini, esquemas Pydantic, reintentos y caché
+│   ├── pdf_generator.py               # Renderizado de fichas corporativas PDF
+│   ├── bi_export.py                   # Dataset para BI, resolución de enlaces y notificación n8n
 │   └── __init__.py
+├── n8n/
+│   └── workflow_drive_sheets.json     # Flujo importable en n8n (Webhook -> Drive -> Sheets)
 ├── recursos/
 │   └── talsa-logo.png                 # Logo utilizado en los PDF
 ├── salida/
@@ -96,11 +98,10 @@ talsa-transformacion-digital/
 │   ├── ficha_V-2026-0102.pdf
 │   ├── ficha_V-2026-0103.pdf
 │   ├── dataset_looker_studio.csv
-│   ├── ventas_analisis_completo.csv
 │   └── cache_ia.json
 ├── tests/
-│   └── test_pipeline_ia.py
-├── .env.example                       # Ejemplo sin claves reales
+│   └── test_pipeline_ia.py            # Suite de pruebas automatizadas (7 tests)
+├── .env.example                       # Ejemplo de configuración sin claves reales
 ├── .gitignore                         # Exclusión de secretos y archivos locales
 ├── pipeline_ia.py                     # Único punto de entrada (CLI)
 ├── pytest.ini
@@ -108,7 +109,7 @@ talsa-transformacion-digital/
 └── README.md
 ```
 
-> `.env`, `.venv/`, `.git/`, las cachés de Python y los archivos temporales **no deben subirse ni incluirse en el ZIP de entrega**. `.env.example` sí debe incluirse.
+> `.env`, `.venv/`, `.git/`, las cachés de Python y los archivos temporales **no deben subirse ni incluirse en un ZIP de entrega**. `.env.example` sí debe incluirse.
 
 ## 5. Instalación desde cero
 
@@ -131,7 +132,7 @@ python -m pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
 
-Si PowerShell restringe la activación, se puede usar directamente `\.venv\Scripts\python.exe pipeline_ia.py --sin-ia`, sin activar el entorno.
+Si PowerShell restringe la activación, se puede usar directamente `.\.venv\Scripts\python.exe pipeline_ia.py --sin-ia`, sin activar el entorno.
 
 ### macOS o Linux
 
@@ -143,10 +144,13 @@ python -m pip install -r requirements.txt
 cp .env.example .env
 ```
 
-**Configurar IA (opcional):** edita `.env` e introduce tu clave real, sin compartirla:
+**Configurar IA y enlaces (opcional):** edita `.env` e introduce tu clave real o las variables opcionales de publicación, sin compartirlas:
 
 ```dotenv
 GEMINI_API_KEY="REEMPLAZAR_POR_MI_CLAVE_PRIVADA"
+# N8N_WEBHOOK_URL="http://localhost:5678/webhook/talsa-bi"
+# TALSA_PDF_BASE_URL="https://raw.githubusercontent.com/tu-usuario/talsa-transformacion-digital/main/salida"
+# TALSA_PDF_LINKS_MAP='{"V-2026-0101":"https://drive.google.com/...","V-2026-0102":"https://drive.google.com/...","V-2026-0103":"https://drive.google.com/..."}'
 ```
 
 La API puede estar sujeta a disponibilidad, límites y costos del proveedor. Si solo quieres reproducir el ejercicio sin conectarte, **no hace falta una clave**: ejecuta `--sin-ia`.
@@ -155,13 +159,10 @@ La API puede estar sujeta a disponibilidad, límites y costos del proveedor. Si 
 
 | Comando | Qué ocurre |
 |---|---|
-| `python pipeline_ia.py --sin-ia` | Ejecuta todo con resultados simulados, sin llamar a Gemini. Es la primera prueba recomendada. |
-| `python pipeline_ia.py` | Intenta usar caché válida o consultar Gemini; si falla, usa un resultado `MOCK` y lo advierte. |
-| `python pipeline_ia.py --modelo gemini-2.5-flash` | Solicita otro modelo; verifica previamente que exista y esté habilitado en tu cuenta. |
-| `python pipeline_ia.py --sin-pdf` | Genera los CSV, sin regenerar fichas PDF. |
-| `python pipeline_ia.py --salida-csv salida/mi_analisis.csv` | Cambia la ruta del CSV completo; con ruta personalizada no se genera automáticamente el CSV de Looker salvo configuración adicional por código. |
-| `python pipeline_ia.py --url-base-pdf "https://mi-dominio.example/fichas"` | Genera el campo de PDF con enlaces públicos **solo si tú ya publicaste esos PDF en esa ubicación**. |
-| `python pipeline_ia.py --help` | Lista argumentos y valores predeterminados. |
+| `python pipeline_ia.py --sin-ia` | Ejecuta todo con resultados simulados (`MOCK`), sin llamar a Gemini. Es la primera prueba recomendada. |
+| `python pipeline_ia.py` | Intenta usar caché válida o consultar Gemini (`gemini-flash-lite-latest` por defecto); si falla, usa un resultado `MOCK` y lo advierte. |
+| `python pipeline_ia.py --modelo gemini-2.5-flash` | Solicita otro modelo de Gemini; verifica previamente que exista y esté habilitado en tu cuenta. |
+| `python pipeline_ia.py --help` | Lista los argumentos disponibles y sus valores predeterminados. |
 
 Para una demostración controlada, empieza con:
 
@@ -169,105 +170,106 @@ Para una demostración controlada, empieza con:
 python pipeline_ia.py --sin-ia
 ```
 
-Busca el resumen final en consola y abre `salida/`. En un modo `MOCK`, tanto el PDF como los CSV indican claramente que el resultado **no** procede de una consulta en vivo a Gemini.
+Revisa la salida en consola y abre la carpeta `salida/`. Tanto los PDF como el CSV registran en `origen_analisis` si el análisis provino de `IA`, `CACHE` o `MOCK`.
 
-**Para mostrar una petición nueva a Gemini:** configura la clave, respalda `salida/cache_ia.json`, elimina **solo** esa caché de tu copia local o modifica deliberadamente los insumos/modelo y ejecuta `python pipeline_ia.py`. Comprueba en la consola `Origen: IA`. Si ves `CACHE`, se reutilizó una respuesta; si ves `MOCK`, no hubo respuesta válida de Gemini.
+**Para mostrar una petición nueva a Gemini:** configura `GEMINI_API_KEY` en `.env`, respalda `salida/cache_ia.json`, elimina esa caché de tu copia local (o modifica deliberadamente los insumos/modelo) y ejecuta `python pipeline_ia.py`. Comprueba en consola `[OK] [...] Análisis IA validado con éxito`. Si ves `[CACHE]`, se reutilizó una respuesta previa; si ves `[MOCK]`, no hubo respuesta válida de Gemini.
 
 ## 7. Flujo de datos y arquitectura
 
 ```mermaid
 flowchart TD
-    A[JSON: ventas] --> D[ETL y limpieza]
-    B[TXT: catálogo técnico] --> D
-    C[TXT: perfiles de clientes] --> D
-    D --> E[Dataset maestro y cruce validado]
-    E --> F{Modo sin IA?}
-    F -->|Sí| G[MOCK local]
-    F -->|No| H{Caché SHA-256 válida?}
-    H -->|Sí| I[Resultado CACHE]
-    H -->|No| J[Gemini: JSON + Pydantic + reintentos]
-    J -->|Respuesta válida| K[Resultado IA y caché]
-    J -->|Fallo| G
-    G --> L[Dataset enriquecido]
+    A["JSON: ventas"] --> D["ETL y limpieza (modulos/etl.py)"]
+    B["TXT: catálogo técnico"] --> D
+    C["TXT: perfiles de clientes"] --> D
+    D --> E["Dataset maestro y cruce validado"]
+    E --> F{"¿Modo --sin-ia?"}
+    F -->|Sí| G["MOCK local"]
+    F -->|No| H{"¿Caché SHA-256 válida?"}
+    H -->|Sí| I["Resultado CACHE"]
+    H -->|No| J["Gemini: JSON + Pydantic + reintentos"]
+    J -->|Respuesta válida| K["Resultado IA y guarda en caché"]
+    J -->|Fallo tras 3 intentos| G
+    G --> L["Dataset enriquecido"]
     I --> L
     K --> L
-    L --> M[3 fichas PDF]
-    L --> N[CSV completo]
-    L --> O[CSV para Looker Studio]
-    O --> P[Dashboard externo por configurar]
+    L --> M["3 fichas PDF (modulos/pdf_generator.py)"]
+    L --> O["CSV Looker Studio (modulos/bi_export.py)"]
+    O --> N{"¿N8N_WEBHOOK_URL activo?"}
+    N -->|Sí| Q["n8n sube PDFs a Drive, actualiza Sheets y devuelve links al CSV"]
+    N -->|No| P["Dashboard Looker Studio"]
+    Q --> P
 ```
 
-La **orquestación** está en `pipeline_ia.py`. Los módulos encapsulan funciones especializadas y se comunican mediante `DataFrame` y esquemas Pydantic. Esto facilita ejecutar y probar ETL, IA, PDF y BI de manera independiente.
+La **orquestación** está en `pipeline_ia.py`. Los módulos en `modulos/` encapsulan responsabilidades específicas (`etl.py`, `ia_cache.py`, `pdf_generator.py` y `bi_export.py`) y se comunican mediante `DataFrame` y esquemas Pydantic. Esto facilita mantener y probar cada etapa de forma modular.
 
 ## 8. Cómo se cruzan datos sin claves foráneas
 
-### Venta + equipo: clave de modelo normalizada
+### Venta + equipo: clave canónica de modelo por Regex
 
-El nombre comercial y la ficha técnica incluyen un identificador alfanumérico, aunque escrito de maneras diferentes:
+El nombre comercial en ventas y la ficha técnica en el catálogo contienen el identificador alfanumérico del modelo, pero escrito de maneras distintas:
 
-| Fuente comercial | Fuente técnica | Clave interna |
+| Fuente comercial (`clientes_ventas.json`) | Fuente técnica (`catalogo_equipos_raw.txt`) | Clave canónica (`codigo_modelo`) |
 |---|---|---|
 | `Pasteurizador de placas PX-3000` | `px3000` | `PX3000` |
 | `Caldera pirotubular CV-150` | `CV150` | `CV150` |
 | `Liofilizador industrial LF-50` | `LF 50` | `LF50` |
 
-`extraer_codigo_modelo()` utiliza una expresión regular que reconoce **dos letras y de dos a cuatro números**, admite espacios o guiones y devuelve un código estándar en mayúsculas. Se realiza un `LEFT JOIN` por `codigo_modelo` y se **rechazan ventas sin ficha asociada**.
+`extraer_codigo_modelo()` utiliza la expresión regular `\b([A-Za-z]{2})[\s\-]*(\d{2,4})\b` que reconoce **dos letras y de dos a cuatro números**, admite espacios o guiones intermedios y devuelve un código estándar en mayúsculas. Luego se realiza un `LEFT JOIN` (`pd.merge`) por `codigo_modelo` y se **rechazan ventas sin ficha técnica asociada**.
 
 ### Venta + cliente: nombre de empresa normalizado
 
-`cargar_perfiles_clientes()` separa las notas comerciales por párrafos; cada bloque comienza con la razón social seguida por un guion. Se genera `empresa_norm` pasando el nombre a minúsculas y quitando espacios de borde. El sistema hace un `LEFT JOIN` con `empresa_norm` derivado de las ventas y **rechaza clientes sin perfil**.
+`cargar_perfiles_clientes()` separa las notas comerciales por párrafos; cada bloque comienza con la razón social seguida por una raya (`—`). Se genera la clave `empresa_norm` aplicando `.strip().lower()` en ambas fuentes. El sistema hace un `LEFT JOIN` por `empresa_norm` y **rechaza ventas sin perfil de cliente asociado**.
 
-**¿Por qué no usar `id_cliente`?** Porque ese identificador está en el JSON de ventas, pero no en el archivo de notas. Normalizar un dato presente en ambas fuentes permite cruzar la información sin inventar claves.
+**¿Por qué no usar `id_cliente`?** Porque ese identificador está en el JSON de ventas, pero no en el archivo de texto de perfiles. Normalizar el nombre de la empresa presente en ambas fuentes permite relacionarlas de forma determinista.
 
-### Otras transformaciones y controles
+### Otras transformaciones y controles en `modulos/etl.py`
 
-- `pd.json_normalize()` convierte `ubicacion.ciudad`, `ubicacion.departamento` y `ubicacion.pais` en columnas.
-- Las fechas se convierten a `YYYY-MM-DD`; los montos a números con dos decimales.
-- Las unidades se homogeneizan, por ejemplo `72°C` → `72 °C`, `15 seg` → `15 s`, `440V` → `440 V`, `2000 l/h` → `2000 L/h`.
-- Se comprueban: campos obligatorios, valores vacíos, `id_venta` duplicados, fechas inválidas, montos menores o iguales a cero y modelos desconocidos.
+- `pd.json_normalize()` aplana `ubicacion.ciudad`, `ubicacion.departamento` y `ubicacion.pais` en columnas de primer nivel.
+- Se extrae `tipo_equipo` tomando la primera palabra del equipo comprado capitalizada (`Pasteurizador`, `Caldera`, `Liofilizador`).
+- Las fechas se estandarizan al formato `YYYY-MM-DD`; los montos se convierten a numéricos redondeados a dos decimales.
+- Se valida integridad: se rechazan `id_venta` duplicados, montos nulos, cero o negativos, y cualquier venta que quede sin ficha técnica o sin perfil tras el cruce.
 
-**Limitación:** el emparejamiento por nombre puede fallar ante tildes, variaciones de razón social, errores ortográficos o nombres repetidos. El método actual es adecuado para estas tres entradas controladas; para producción convendría una tabla de correspondencias aprobada y revisión manual de casos ambiguos.
+**Limitación:** el emparejamiento por nombre puede fallar ante variaciones de tildes, cambios de razón social o errores tipográficos. El método actual es óptimo para estas tres entradas controladas; en un entorno productivo convendría un maestro de clientes con IDs unificados.
 
 ## 9. Cómo funciona el análisis con IA
 
 ### Datos enviados y diseño del prompt
 
-`construir_prompt()` genera una instrucción por venta con cuatro secciones: (1) rol de ingeniero de aplicaciones TALSA, (2) reglas de fundamentación y límites, (3) ficha técnica del equipo y (4) contexto real del cliente. Se pide **comparar** capacidad, caudal, presión, temperatura, energía, agua de servicio y exigencias regulatorias **solo cuando los datos lo permiten**.
+`construir_prompt()` en `modulos/ia_cache.py` ensambla una instrucción clara con el rol de ingeniero experto de TALSA, la regla estricta de basarse únicamente en los datos suministrados sin inventar especificaciones, los datos del cliente y su perfil operativo en planta, y la ficha técnica cruda del equipo comprado.
 
-El prompt exige:
+### Salida JSON estructurada con Pydantic
 
-- Extraer especificaciones técnicas cuantificables.
-- Proponer **casos de uso concretos** para esa planta.
-- Recomendar un **parámetro**, su **valor y unidad** y un **motivo** apoyado en las fuentes.
-- Asignar un `score_compatibilidad` entero entre **0 y 100** y una `complejidad_tecnica` de `Alto`, `Medio` o `Bajo`.
-- Penalizar problemas de infraestructura; **no inventar parámetros ausentes**.
-
-### Salida JSON estructurada
-
-Gemini se invoca con `response_mime_type="application/json"`, un `response_schema` Pydantic y temperatura de `0.1`. Un ejemplo **ilustrativo, no el resultado real de una venta**, es:
+Gemini se invoca con `response_mime_type="application/json"`, `response_schema=AnalisisTecnicoIA` y `temperature=0.1`. Un ejemplo de la estructura validada es:
 
 ```json
 {
   "especificaciones_tabla": [
-    {"parametro": "Capacidad nominal", "valor": "3.000 L/h"},
-    {"parametro": "Temperatura", "valor": "72 a 85 °C"}
+    {"parametro": "Capacidad nominal", "valor": "3.000 L/h (leche) / 2.000 L/h (viscosos)"},
+    {"parametro": "Temperatura HTST", "valor": "72 a 85 °C (retención 15 s)"},
+    {"parametro": "Salida producto enfriado", "valor": "4 °C +/- 1 °C (pide agua a 2 °C)"},
+    {"parametro": "Regeneración térmica", "valor": "90% aprox."}
   ],
   "casos_uso": [
-    "Pasteurización continua de leche",
-    "Mejora del rendimiento frente al proceso por lotes"
+    "Pasar de pasteurización por lotes (63 °C/30 min) a proceso continuo HTST",
+    "Pasteurización de leche en bolsa y bases de yogur/kumis ahorrando energía"
   ],
   "recomendaciones": [
-    {"parametro": "Agua helada", "valor_unidad": "2 °C", "motivo": "Temperatura requerida por la ficha para el enfriamiento final"},
-    {"parametro": "Caudal nominal", "valor_unidad": "3.000 L/h", "motivo": "Referencia del catálogo para leche entera"},
-    {"parametro": "Presión máxima", "valor_unidad": "6 bar", "motivo": "Límite técnico indicado en la ficha"}
+    {"parametro": "Agua helada", "valor_unidad": "2 °C", "motivo": "Ampliar banco de hielo porque el agua llega caliente en temporada seca"},
+    {"parametro": "Retención HTST", "valor_unidad": "72-85 °C por 15 s", "motivo": "Cumplir norma INVIMA mediante control PLC"},
+    {"parametro": "Caudal en viscosos", "valor_unidad": "2.000 L/h máx.", "motivo": "Bajar caudal en mezclas viscosas cuidando no superar 6 bar"}
   ],
-  "score_compatibilidad": 80,
-  "justificacion_score": "El equipo es compatible con el proceso continuo, sujeto a mejorar el suministro de agua helada.",
+  "score_compatibilidad": 84,
+  "justificacion_score": "Excelente ajuste en capacidad, ahorro energético y norma INVIMA; requiere mejorar el banco de hielo.",
   "complejidad_tecnica": "Medio"
 }
 ```
 
-En la práctica, el esquema admite **2–8 especificaciones**, **2–4 casos** y **3–5 recomendaciones**. `AnalisisTecnicoIA` incorpora además `origen_analisis`, que no forma parte del esquema enviado al modelo.
+El esquema Pydantic `AnalisisTecnicoIA` exige:
+- **`especificaciones_tabla`**: entre **4 y 7** especificaciones (`EspecificacionEquipo`).
+- **`casos_uso`**: entre **2 y 4** casos de uso aplicables a la planta.
+- **`recomendaciones`**: entre **3 y 5** recomendaciones operativas (`RecomendacionOperativa`).
+- **`score_compatibilidad`**: entero entre **0 y 100**.
+- **`complejidad_tecnica`**: literal estricto `'Alto'`, `'Medio'` o `'Bajo'`.
 
 > El score **lo estima el modelo**, no es una fórmula ingenieril certificada ni una probabilidad. La complejidad también es una categoría de evaluación asistida por IA.
 
@@ -275,106 +277,74 @@ En la práctica, el esquema admite **2–8 especificaciones**, **2–4 casos** y
 
 ### Respuestas inválidas y fallos de API
 
-`ejecutar_con_backoff()` intenta la llamada hasta **3 veces** de forma predeterminada y valida el texto JSON y el esquema **dentro del bucle de reintentos**. Usa esperas progresivas con variación aleatoria (*jitter*) para errores transitorios, entre ellos `429`, `503` y timeouts, y también reintenta JSON malformado y errores de esquema. Ante fallo definitivo, se registra el problema y se usa **MOCK**.
+`analizar_venta()` intenta la llamada a Gemini hasta **3 veces** (`max_reintentos = 3`) con un timeout de 40 segundos por petición, y valida tanto la sintaxis JSON como las restricciones de `AnalisisTecnicoIA.model_validate_json()` **dentro del bloque `try`**. Si ocurre un error de red/API (`503`, `429`, timeout) o si el modelo devuelve un JSON que no cumple el esquema Pydantic, espera de forma incremental (`2 * intento` segundos) y reintenta. Si fallan los 3 intentos, el sistema activa automáticamente el respaldo **MOCK** sin interrumpir el pipeline.
 
-Los modelos Pydantic validan tipos, número de elementos, límites del score y valores posibles de complejidad. `verificar_respaldo_contenido()` añade una **comprobación heurística** de coincidencias léxicas y cifras contra las fuentes. El resultado se exporta en `contenido_verificado`.
-
-**Precisión importante:** `contenido_verificado=true` significa que pasó esa heurística, **no que se haya probado matemáticamente cada afirmación ni que una persona la haya aprobado**. El sistema advierte sobre falta de respaldo, pero actualmente no bloquea automáticamente todas esas respuestas.
-
-### Trazabilidad del origen
+### Trazabilidad del origen (`origen_analisis`)
 
 | Valor | Significado | ¿Se consulta Gemini en esta ejecución? |
 |---|---|---|
-| `IA` | Respuesta nueva validada del modelo. | Sí. |
-| `CACHE` | Respuesta previa asociada a los mismos insumos. | No. |
-| `MOCK` | Simulación local predefinida o contingencia. | No, o la consulta falló. |
+| `IA` | Respuesta nueva generada y validada por Gemini. | Sí. |
+| `CACHE` | Respuesta previa validada asociada al mismo hash de insumos. | No (0 llamadas a la API). |
+| `MOCK` | Respaldo local predefinido (`--sin-ia`, sin `GEMINI_API_KEY` o tras agotar reintentos). | No, o la consulta falló. |
 
 ### Cómo evita repetir consultas
 
-Se calcula un hash SHA-256 del **modelo, el prompt, la ficha y el perfil del cliente**. La entrada en `salida/cache_ia.json` se reutiliza únicamente si el hash coincide y la estructura pasa Pydantic. Si cambias alguno de esos elementos, el hash deja de coincidir y, sin `--sin-ia`, se intenta una nueva consulta. Las respuestas `MOCK` **no se guardan como si fueran IA**.
-
-La caché puede contener análisis desactualizados respecto a normas o condiciones reales si sus textos fuente no se actualizan. No equivale a una revisión de vigencia técnica.
+`generar_hash_consulta()` calcula un hash SHA-256 (recortado a 16 caracteres) a partir de `id_venta|modelo|ficha|perfil`. La entrada guardada en `salida/cache_ia.json` se reutiliza únicamente si el hash coincide y los datos pasan la validación de `AnalisisTecnicoIA`. Si cambia cualquier insumo o el nombre del modelo, el hash cambia y se realiza una nueva consulta a la IA. Las respuestas `MOCK` **nunca se guardan en `cache_ia.json`**, evitando contaminar la caché con datos simulados.
 
 ## 11. Fichas PDF y manual de marca
 
-`modulos/pdf_generator.py` usa `fpdf2`, tamaño A4, secciones numeradas y tablas con información comercial, contexto del cliente, especificaciones, casos de uso y recomendaciones. Genera un archivo con nombre `ficha_<id_venta>.pdf` por cada venta.
+`modulos/pdf_generator.py` usa `fpdf2` (`FichaTalsaPDF`), tamaño A4, márgenes limpios y tablas estructuradas con datos comerciales, especificaciones técnicas, casos de uso y recomendaciones operativas. Genera un archivo `ficha_<id_venta>.pdf` por cada venta.
 
-Se respetan las siguientes reglas del **Manual de Marca TALSA**:
+Se aplican las reglas del **Manual de Marca TALSA**:
 
 | Elemento | Aplicación |
 |---|---|
-| Logotipo | Arriba a la izquierda, proporción original, sobre fondo claro; altura aproximada de 2 cm. |
-| Rojo principal `#DC182A` | Títulos, líneas divisorias y encabezados de tabla. |
-| Gris claro `#F4F4F4` | Filas alternas en las tablas. |
-| Negro y blanco | Texto principal y fondos. |
-| Gris `#808080` | Pie de página y contenidos secundarios. |
+| Logotipo | Arriba a la izquierda (`recursos/talsa-logo.png`), proporción original sobre fondo claro. |
+| Rojo principal `#DC182A` | Títulos, recuadro de score/complejidad, línea divisoria superior y encabezados de tabla. |
+| Gris claro `#F4F4F4` | Filas alternas en las tablas para facilitar la lectura. |
+| Negro `#000000` y Blanco `#FFFFFF` | Texto principal y fondos base. |
+| Gris `#808080` | Lema corporativo y pie de página con numeración. |
 | Lema | «¡Siempre a tu lado para apalancar tu éxito!». |
-| Pie | Nombre de TALSA y número de página. |
-| Fuente | Helvetica, alternativa permitida por el manual a Bebas Neue y Kanit. |
+| Fuente | Helvetica, tipografía limpia compatible con todos los visores PDF. |
 
-Cada ficha incorpora score, complejidad y el **origen del análisis**. Los PDFs de `MOCK` muestran una advertencia adicional. Los archivos de muestra incluidos tienen una página cada uno; los documentos más extensos pueden paginarse automáticamente.
+Cada ficha muestra en su encabezado el `Score` de compatibilidad, la `Complejidad` técnica y, en la sección de análisis, indica explícitamente el `origen_analisis` (`IA`, `CACHE` o `MOCK`). Además, `limpiar_texto()` normaliza caracteres especiales fuera de `latin-1` para evitar errores de codificación al renderizar el PDF.
 
-**Nota:** el código reemplaza algunos caracteres fuera de Latin-1 para que Helvetica los imprima sin problemas. Si se necesita máxima fidelidad tipográfica, una mejora sería incrustar una fuente Unicode autorizada.
-
-## 12. Dataset y dashboard de Looker Studio
+## 12. Dataset, automatización con n8n y dashboard de Looker Studio
 
 > **Dashboard publicado:** [Dashboard TALSA en Looker Studio](https://datastudio.google.com/reporting/4778f074-a166-4442-ae63-384c8d901691)
 
-### Archivos: diferencias
+### Diccionario de datos de `salida/dataset_looker_studio.csv` (19 columnas)
 
-`salida/ventas_analisis_completo.csv` conserva campos de auditoría y resúmenes detallados. `salida/dataset_looker_studio.csv` está **optimizado para BI**: elimina objetos de Python, JSON anidados y textos técnicos crudos; deja dimensiones, métricas, ruta del PDF y resúmenes en una línea.
-
-### Diccionario de datos del CSV BI
+`exportar_csv_bi()` en `modulos/bi_export.py` genera un archivo plano codificado en `utf-8-sig`, eliminando listas anidadas y textos crudos para dejar únicamente las 19 columnas listas para BI:
 
 | Campo(s) | Tipo recomendado en Looker Studio | Interpretación |
 |---|---|---|
-| `id_venta`, `id_cliente` | Texto | Identificadores de venta y cliente. |
+| `id_venta`, `id_cliente` | Texto | Identificadores únicos de la venta y del cliente. |
+| `empresa`, `industria` | Texto | Nombre del cliente y sector industrial para segmentación. |
+| `equipo_comprado`, `tipo_equipo`, `codigo_modelo` | Texto | Descripción comercial, familia (`Pasteurizador`, `Caldera`, `Liofilizador`) y código canónico. |
 | `fecha_venta` | Fecha | Fecha comercial en formato `YYYY-MM-DD`. |
-| `empresa`, `industria` | Texto | Cliente e industria para segmentación. |
-| `ciudad`, `departamento`, `pais` | Texto / geográfico cuando corresponda | Ubicación del cliente. |
-| `equipo_comprado`, `tipo_equipo`, `codigo_modelo` | Texto | Descripción, familia y modelo del equipo. |
-| `complejidad_tecnica` | Texto | Clasificación `Alto`, `Medio`, `Bajo`. |
-| `origen_analisis` | Texto | `IA`, `CACHE` o `MOCK`; útil para filtrar simulaciones. |
-| `contenido_verificado` | Booleano | Resultado de la comprobación heurística de respaldo. |
 | `monto_usd` | Número / Moneda USD | Valor comercial de la venta. |
-| `score_compatibilidad` | Número | Score 0–100 de compatibilidad estimada. |
-| `num_casos_uso`, `num_recomendaciones`, `num_especificaciones` | Número entero | Cantidad de elementos de cada análisis. |
-| `archivo_ficha_pdf` | Texto / URL (si es público) | Ruta relativa o URL publicada de la ficha. |
-| `justificacion_score` | Texto | Explicación de la puntuación. |
-| `resumen_casos_uso`, `resumen_recomendaciones`, `resumen_especificaciones` | Texto | Descripciones sintetizadas para tablas. |
+| `ciudad`, `departamento`, `pais` | Texto / Geográfico | Ubicación de la planta del cliente. |
+| `origen_analisis` | Texto | `IA`, `CACHE` o `MOCK`; permite auditar la fuente del análisis. |
+| `score_compatibilidad` | Número | Puntuación de compatibilidad técnica estimada (0–100). |
+| `complejidad_tecnica` | Texto | Nivel de complejidad de implementación (`Alto`, `Medio`, `Bajo`). |
+| `justificacion_score` | Texto | Síntesis ejecutiva del puntaje asignado. |
+| `resumen_casos_uso` | Texto | Casos de uso en planta concatenados con ` \| `. |
+| `resumen_recomendaciones` | Texto | Recomendaciones operativas (`parámetro: valor (motivo)`) concatenadas con ` \| `. |
+| `archivo_ficha_pdf` | Texto / URL | Ruta o enlace público de Google Drive hacia la ficha PDF de la venta. |
 
-**Granularidad:** una fila representa una venta individual, no una recomendación ni un cliente. Para evitar duplicación de montos, no explotes las recomendaciones en filas del mismo dataset sin ajustar las métricas.
+**Valores de comprobación del CSV actual:** 3 ventas, `SUM(monto_usd) = USD 256.700,00` y `AVG(score_compatibilidad) = 87,33` (scores: `84`, `86` y `92`).
 
-### Cómo construir el dashboard (paso a paso)
+### Automatización con n8n (Google Drive + Google Sheets)
 
-1. Abre **Looker Studio** con una cuenta con permiso para crear informes y selecciona **Crear → Informe**.
-2. Conecta el archivo `salida/dataset_looker_studio.csv`. Si la interfaz no admite cargarlo directamente, súbelo primero a Google Sheets y conecta esa hoja como fuente. **No cambies los encabezados**.
-3. Comprueba los tipos de campos: `fecha_venta` como fecha, `monto_usd` y `score_compatibilidad` como numéricos; `complejidad_tecnica`, `tipo_equipo` e `industria` como dimensiones de texto.
-4. Crea dos **tarjetas de KPI**: `SUM(monto_usd)` y `AVG(score_compatibilidad)`; no uses suma para calcular el promedio de compatibilidad.
-5. Crea un gráfico de barras de **ventas por industria**: dimensión `industria`, métrica `SUM(monto_usd)`.
-6. Crea un gráfico de barras apiladas o tabla dinámica para **distribución de complejidad por tipo de equipo**: dimensión `tipo_equipo`, desglose `complejidad_tecnica`, métrica `COUNT_DISTINCT(id_venta)` o recuento de registros, evitando sumar el score.
-7. Añade **controles de filtro** por `industria`, `tipo_equipo` y un control de intervalo para `fecha_venta`.
-8. Agrega una tabla detallada con empresa, equipo, monto, score, complejidad, origen y, si son URLs públicas, enlaces a las fichas.
-9. Prueba que los filtros afecten los gráficos y KPIs; revisa la legibilidad de títulos, moneda USD, unidades y colores.
-10. Comparte el informe con **permiso de lectura** para el evaluador y copia el vínculo en [Información de entrega](#17-información-de-entrega).
+Para que los enlaces a las fichas PDF sean accesibles desde Looker Studio en Internet y la fuente de datos se actualice sola, el repositorio incluye el flujo [`n8n/workflow_drive_sheets.json`](n8n/workflow_drive_sheets.json) y la función `notificar_n8n()` en `modulos/bi_export.py`:
 
-**Valores de comprobación del CSV incluido:** 3 ventas, `SUM(monto_usd) = USD 256.700,00` y `AVG(score_compatibilidad) = 85`. Estos números describen **el CSV adjunto**, no una cifra fija: pueden cambiar al regenerar análisis con otro modelo o en modo `MOCK`.
+1. Importa `n8n/workflow_drive_sheets.json` en tu instancia de n8n y configura tus credenciales de **Google Drive** y **Google Sheets**.
+2. Define en tu `.env` la variable `N8N_WEBHOOK_URL="http://localhost:5678/webhook/talsa-bi"`.
+3. Al ejecutar `python pipeline_ia.py`, el script enviará por `POST` las ventas y las rutas locales de los PDFs recién creados.
+4. El flujo de n8n lee cada PDF local, lo sube a Google Drive, inserta o actualiza las filas en Google Sheets con el `webViewLink` público y devuelve los enlaces a Python, el cual actualiza automáticamente la columna `archivo_ficha_pdf` en `salida/dataset_looker_studio.csv`.
 
-### Enlazar fichas desde Looker Studio
-
-Por defecto, `archivo_ficha_pdf` contiene una **ruta local** como `salida/ficha_V-2026-0101.pdf`. **Una ruta local no es una URL accesible desde Internet**. Para que un lector del dashboard pueda abrir el PDF:
-
-1. Publica cada archivo en una ubicación autorizada que permita acceso de lectura a los evaluadores.
-2. Si todos los PDF comparten un mismo directorio y nombre de archivo, configura `TALSA_PDF_BASE_URL` o `--url-base-pdf` con su **URL real**.
-3. Si cada PDF tiene una URL distinta, define `TALSA_PDF_LINKS_MAP` en `.env`, apuntando a un JSON de correspondencias, por ejemplo:
-
-```json
-{
-  "V-2026-0101": "https://ejemplo.invalid/fichas/ficha_V-2026-0101.pdf"
-}
-```
-
-4. Regenera el CSV y verifica el acceso desde una sesión que no sea la tuya. El dominio `.invalid` del ejemplo **no es una publicación real**.
+Si n8n no está activo, `resolver_url_pdf()` permite definir manualmente `TALSA_PDF_LINKS_MAP` (JSON por `id_venta`) o `TALSA_PDF_BASE_URL` en `.env`, o deja por defecto la ruta local `salida/ficha_<id_venta>.pdf`.
 
 ## 13. Pruebas y verificación
 
@@ -384,74 +354,66 @@ Desde la raíz del repositorio, con las dependencias instaladas:
 python -m pytest -v
 ```
 
-La suite en `tests/test_pipeline_ia.py` tiene **14 tests** que comprueban extracción de modelo, tipos de equipo, esquema Pydantic, cruce ETL, errores 429/503/timeout, JSON inválido, invalidación de caché, ausencia de contaminación `MOCK`, normalización de unidades, validación de ventas, respaldo de contenido, exportación CSV, generación de PDF y un flujo de extremo a extremo que incluye ZIP seguro.
+La suite en `tests/test_pipeline_ia.py` cuenta con **7 pruebas automatizadas** que verifican:
+1. `test_extraer_codigo_modelo`: extracción y normalización de códigos con distintos formatos.
+2. `test_construir_dataset_maestro`: cruce sin pérdidas de las 3 fuentes de datos.
+3. `test_validaciones_ventas_duplicados_y_montos`: rechazo de IDs duplicados y montos negativos.
+4. `test_esquema_pydantic_mock`: cumplimiento estricto de los esquemas Pydantic en los respaldos `MOCK`.
+5. `test_reintentos_pydantic_y_fallback_mock`: recuperación ante JSON truncado y error `503`, guardado en caché y lectura posterior con 0 llamadas adicionales a la API.
+6. `test_pipeline_completo_pdf_y_csv_bi`: generación extremo a extremo de los 3 PDFs y del CSV limpio de Looker Studio.
+7. `test_n8n_actualiza_links_pdf_en_csv`: envío al webhook de n8n y actualización automática de los enlaces de Google Drive en el CSV.
 
-**Resultado de la revisión realizada el 22/10/2026:** `14 passed`. También se ejecutó `python pipeline_ia.py --sin-ia` de forma aislada, con los tres PDF y ambos CSV generados. La prueba **no certifica** una llamada real a la API de Gemini ni la existencia de un informe publicado en Looker Studio: esas partes requieren verificación con credenciales y enlaces externos.
+### Lista rápida de verificación de entrega
 
-### Lista rápida para comprobar una entrega
-
-- [x] El proceso ETL lee los tres archivos de entrada y encuentra sus tres cruces.
-- [x] El análisis tiene JSON estructurado, validaciones, reintentos, caché y modo simulado.
-- [x] Se generan automáticamente las tres fichas PDF con el diseño TALSA.
-- [x] Se genera un CSV de una fila por venta con métricas y dimensiones.
-- [x] Hay pruebas automáticas y origen de cada análisis.
+- [x] El proceso ETL lee los tres archivos de entrada y realiza el cruce completo sin datos huérfanos.
+- [x] El análisis usa JSON estructurado con Pydantic, reintentos, caché por hash y respaldo `MOCK`.
+- [x] Se generan automáticamente las tres fichas PDF bajo el Manual de Marca TALSA.
+- [x] Se genera el CSV limpio de una fila por venta y se soporta publicación automática con n8n.
+- [x] Pruebas automatizadas en `pytest` aprobadas (`7 passed`).
 - [x] `README.md`, `requirements.txt`, `.env.example` y `.gitignore` disponibles.
-- [x] Publicar el dashboard y entregar su URL con acceso de lectura (paso externo pendiente).
+- [x] Dashboard publicado en Looker Studio con enlace de lectura.
 
 ## 14. Seguridad, límites y mejoras
 
 ### Seguridad
 
-- **Nunca subas `.env` al repositorio ni lo adjuntes a un ZIP**. `.gitignore` evita el seguimiento accidental por Git, **pero no elimina secretos de un ZIP creado manualmente**.
-- Si una clave se publicó o compartió accidentalmente, **revócala y genera una nueva** desde su proveedor. Borrarla de una copia no anula la clave ya expuesta.
-- Usa `.env.example` solo como plantilla, sin secretos. Revisa también archivos históricos y commits antes de publicar un repositorio.
-- Revisa los permisos de los PDF en la nube antes de enlazarlos desde un dashboard.
-- Antes de entregar, instala dependencias desde `requirements.txt`; **no distribuyas tu carpeta `.venv/`**, porque depende del sistema operativo y aumenta mucho el tamaño.
+- **Nunca subas `.env` al repositorio ni lo adjuntes a un ZIP**. `.gitignore` evita el seguimiento accidental por Git, pero no elimina secretos si comprimes la carpeta manualmente.
+- Si una clave se expuso accidentalmente, **revócala y genera una nueva** en Google AI Studio.
+- Usa `.env.example` únicamente como plantilla sin secretos reales.
+- No distribuyas tu carpeta `.venv/` al compartir el proyecto.
 
 ### Limitaciones conocidas
 
-- El parseo de textos se apoya en delimitadores y expresiones regulares propios de **estas fuentes de muestra**; no es un extractor universal de PDF, OCR ni documentos de fabricantes.
-- Los nombres de empresas se comparan tras pasar a minúsculas y recortar espacios; no hay conciliación difusa ni tabla de equivalencias.
-- La verificación de contenido es heurística: una coincidencia de números o términos **no garantiza** que las conclusiones sean correctas o seguras.
-- Los scores, casos de uso y complejidad son estimaciones de IA (o ejemplos `MOCK`), no cálculos deterministas auditados.
-- En una caída de API o ausencia de credenciales, el programa **puede terminar con archivos `MOCK`**. Por eso siempre se debe revisar `origen_analisis`; una ejecución terminada no demuestra inferencia real.
-- Las versiones de `requirements.txt` definen mínimos (`>=`), no un bloqueo exacto de dependencias; una versión futura puede cambiar el comportamiento.
-- La publicación del dashboard, el alojamiento de PDFs y la validación por especialistas **no están automatizados**.
+- El parseo de textos utiliza expresiones regulares y delimitadores adaptados a las fuentes de esta prueba; para documentos libres o escaneados se requeriría OCR o un parser documental más amplio.
+- El cruce de clientes por nombre normalizado (`strip().lower()`) no contempla errores ortográficos ni variaciones de razón social.
+- Los scores, casos de uso y nivel de complejidad son estimaciones generadas por IA (o ejemplos `MOCK`), no cálculos deterministas certificados.
 
-### Qué mejoraría con más tiempo (priorizado)
+### Qué mejoraría con más tiempo
 
-1. **Alta prioridad:** validación humana de recomendaciones críticas y matriz explícita *afirmación → fragmento de fuente → unidad*, con rechazo de recomendaciones sin evidencia.
-2. **Alta prioridad:** control estricto de estado: fallar con código de salida distinto de cero cuando se exige IA real y esta no está disponible, en vez de aceptar silenciosamente `MOCK` como resultado final.
-3. **Alta prioridad:** pruebas de integración reales en entorno autorizado para Gemini y validación de que el enlace a Looker Studio funciona con permisos de lectura.
-4. **Prioridad media:** esquema de identificadores maestro y reconciliación de nombres/modelos ambiguos; validación de unicidad de perfiles.
-5. **Prioridad media:** reglas transparentes y calibración de `score_compatibilidad` y `complejidad_tecnica` con expertos y rúbrica de puntuación reproducible.
-6. **Prioridad media:** bloqueo de dependencias, integración continua, métricas de costo/latencia y manejo de límites de API.
-7. **Evolución futura:** almacenamiento central de datos y publicación controlada de PDFs, conectados automáticamente al dashboard.
+1. **Validación humana asistida:** interfaz de revisión técnica antes de emitir el PDF definitivo al cliente.
+2. **Maestro de entidades:** identificadores únicos compartidos entre el CRM/ERP y el catálogo técnico para evitar cruces por texto libre.
+3. **CI/CD y bloqueo de versiones:** pipeline en GitHub Actions que ejecute `pytest` en cada commit y archivo `requirements.lock` para reproducibilidad exacta.
 
 ## 15. Problemas frecuentes
 
 | Síntoma | Causa probable | Solución |
 |---|---|---|
-| `ModuleNotFoundError: No module named 'google'` | Dependencias no instaladas en el entorno activo. | Activa `.venv` e instala `python -m pip install -r requirements.txt`. |
-| `No se encontró GEMINI_API_KEY` o salida `MOCK` | Clave ausente, inválida, límite de cuota o fallo API. | Revisa `.env`, acceso y logs; utiliza `--sin-ia` si solo quieres probar localmente. |
-| Siempre aparece `CACHE` en lugar de `IA` | El hash del análisis existente coincide con los insumos. | Respalda y retira `salida/cache_ia.json` en tu copia y ejecuta con clave configurada. |
-| Los enlaces del PDF no abren en Looker Studio | Son rutas `salida/...` que solo existen localmente. | Publica los PDFs con permisos adecuados, establece URL base/mapa y regenera CSV. |
-| `FileNotFoundError` o fallo de cruce | Archivos de datos faltantes, formato modificado o modelo/empresa no reconocidos. | Conserva los tres nombres de archivo y revisa los datos originales y el mensaje ETL. |
-| Excel interpreta mal tildes o caracteres | Codificación del archivo. | Importa el CSV como **UTF-8** (`utf-8-sig` al exportar). |
-| PowerShell no permite activar `.venv` | Restricción de ejecución de scripts. | Ejecuta `\.venv\Scripts\python.exe` directamente. |
-| El sistema dice «éxito», pero necesito inferencia real | El programa hizo contingencia local. | Inspecciona `origen_analisis`; exige `IA` para una prueba de llamada nueva. |
+| `ModuleNotFoundError: No module named 'google'` | Dependencias no instaladas en el entorno activo. | Activa `.venv` e instala con `python -m pip install -r requirements.txt`. |
+| `No hay GEMINI_API_KEY en .env` o salida `MOCK` | Clave ausente, inválida, límite de cuota o fallo de API. | Revisa `.env` o utiliza `--sin-ia` para pruebas locales. |
+| Siempre aparece `CACHE` en lugar de `IA` | El hash SHA-256 de la venta coincide con el guardado en `salida/cache_ia.json`. | Respalda y elimina `salida/cache_ia.json` y vuelve a ejecutar con tu API key. |
+| Los enlaces del PDF son rutas locales `salida/...` | No se configuró n8n ni las variables de URL pública en `.env`. | Configura `N8N_WEBHOOK_URL`, `TALSA_PDF_LINKS_MAP` o `TALSA_PDF_BASE_URL` en `.env`. |
+| PowerShell no permite activar `.venv` | Política de ejecución de scripts de Windows. | Ejecuta `.\.venv\Scripts\python.exe pipeline_ia.py` directamente. |
 
 ## 16. Información de entrega
 
 | Elemento | Estado / enlace |
 |---|---|
-| Repositorio GitHub o GitLab | [Repositorio Talsa](https://github.com/aluminetor/talsa-transformacion-digital) |
+| Repositorio GitHub | [Repositorio Talsa](https://github.com/aluminetor/talsa-transformacion-digital) |
 | Dashboard Looker Studio | [Dashboard TALSA en Looker Studio](https://datastudio.google.com/reporting/4778f074-a166-4442-ae63-384c8d901691) |
 | Archivos de salida | Carpeta [`salida/`](salida/) de este repositorio. |
+| Flujo n8n | [`n8n/workflow_drive_sheets.json`](n8n/workflow_drive_sheets.json) |
 | Ejecución | `python pipeline_ia.py` o `python pipeline_ia.py --sin-ia`. |
 | Pruebas | `python -m pytest -v`. |
 | Datos y material | Fuentes ficticias proporcionadas para la prueba técnica TALSA. |
-| Licencia del proyecto | **No declarada**; no se presupone permiso general de redistribución. |
 
 ---
-
