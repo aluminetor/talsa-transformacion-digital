@@ -1,6 +1,6 @@
 # TALSA | Transformación Digital: análisis técnico de ventas con IA
 
-> **Prueba técnica · Practicante de Transformación Digital (Datos e IA)**  
+> **Proyecto personal de transformación digital: análisis técnico de ventas con IA**  
 > Python · pandas · Google Gemini · Pydantic · fpdf2 · n8n · Looker Studio
 
 Este proyecto transforma **tres fuentes comerciales y técnicas sin claves comunes** en informes de compatibilidad para cada venta, fichas PDF con identidad visual TALSA y un CSV preparado para analizar en Looker Studio, con publicación opcional automatizada mediante **n8n** hacia Google Drive y Google Sheets.
@@ -8,12 +8,12 @@ Este proyecto transforma **tres fuentes comerciales y técnicas sin claves comun
 **En pocas palabras:** se lee lo que se vendió, se identifica la ficha del equipo, se recuperan las necesidades del cliente, se solicita o reutiliza un análisis técnico estructurado y se publican los resultados como archivos locales y/o en la nube.
 
 > [!IMPORTANT]
-> Los datos del ejercicio son **ficticios**. El catálogo indica expresamente que algunas especificaciones están pendientes de validación con fábrica. Los resultados de IA, caché o simulación son **orientativos**, no sustituyen la validación de ingeniería, requisitos legales, manuales oficiales ni procedimientos de seguridad industrial.
+> Los datos de demostración son **ficticios**. El catálogo indica expresamente que algunas especificaciones están pendientes de validación con fábrica. Los resultados de IA, caché o simulación son **orientativos**, no sustituyen la validación de ingeniería, requisitos legales, manuales oficiales ni procedimientos de seguridad industrial.
 
 ## Índice
 
 1. [Objetivo y alcance](#1-objetivo-y-alcance)
-2. [Resultados esperados y estado de entrega](#2-resultados-esperados-y-estado-de-entrega)
+2. [Resultados y estado actual](#2-resultados-y-estado-actual)
 3. [Tecnologías y requisitos previos](#3-tecnologías-y-requisitos-previos)
 4. [Estructura del repositorio](#4-estructura-del-repositorio)
 5. [Instalación desde cero](#5-instalación-desde-cero)
@@ -27,7 +27,7 @@ Este proyecto transforma **tres fuentes comerciales y técnicas sin claves comun
 13. [Pruebas y verificación](#13-pruebas-y-verificación)
 14. [Seguridad, límites y mejoras](#14-seguridad-límites-y-mejoras)
 15. [Problemas frecuentes](#15-problemas-frecuentes)
-16. [Información de entrega](#16-información-de-entrega)
+16. [Información del proyecto](#16-información-del-proyecto)
 
 ## 1. Objetivo y alcance
 
@@ -41,9 +41,9 @@ El pipeline automatiza cinco tareas:
 4. **Documentación:** generar **un PDF por venta**, tabulado y con los colores y el logotipo de TALSA.
 5. **BI y Automatización:** construir un dataset de **una fila por venta** para métricas, gráficos y filtros de Looker Studio, y sincronizar opcionalmente los PDFs y registros mediante un Webhook de **n8n** con Google Drive y Google Sheets.
 
-Los tres equipos contemplados por los datos de la prueba son **PX-3000** (pasteurizador), **CV-150** (caldera) y **LF-50** (liofilizador).
+Los tres equipos incluidos en los datos de demostración son **PX-3000** (pasteurizador), **CV-150** (caldera) y **LF-50** (liofilizador).
 
-## 2. Resultados esperados y estado de entrega
+## 2. Resultados y estado actual
 
 En `salida/` se incluyen los archivos generados por el pipeline:
 
@@ -55,7 +55,7 @@ En `salida/` se incluyen los archivos generados por el pipeline:
 | `dataset_looker_studio.csv` | Datos resumidos y tipados (19 columnas) para el tablero de Looker Studio. |
 | `cache_ia.json` | Respuestas reutilizables cuya validez depende del hash SHA-256 de los insumos. |
 
-**Comprobación del proyecto revisado:** 3 ventas, 3 PDFs de una página, 3 filas y 19 columnas en el CSV de Looker Studio; **7 pruebas de `pytest` aprobadas** (incluyendo el flujo completo e integración con n8n). La ejecución local sin IA también se verificó de extremo a extremo.
+**Estado actual del proyecto:** 3 ventas, 3 PDFs de una página, 3 filas y 19 columnas en el CSV de Looker Studio; **7 pruebas de `pytest` aprobadas** (incluyendo el flujo completo e integración con n8n). La ejecución local sin IA también se verificó de extremo a extremo.
 
 **Estado del dashboard:** el código y el CSV están preparados para Looker Studio. El tablero interactivo publicado se encuentra disponible en: [Dashboard TALSA en Looker Studio](https://datastudio.google.com/reporting/4778f074-a166-4442-ae63-384c8d901691).
 
@@ -109,7 +109,7 @@ talsa-transformacion-digital/
 └── README.md
 ```
 
-> `.env`, `.venv/`, `.git/`, las cachés de Python y los archivos temporales **no deben subirse ni incluirse en un ZIP de entrega**. `.env.example` sí debe incluirse.
+> `.env`, `.venv/`, `.git/`, las cachés de Python y los archivos temporales **no deben subirse ni incluirse en un archivo comprimido**. `.env.example` sí debe incluirse.
 
 ## 5. Instalación desde cero
 
@@ -153,7 +153,7 @@ GEMINI_API_KEY="REEMPLAZAR_POR_MI_CLAVE_PRIVADA"
 # TALSA_PDF_LINKS_MAP='{"V-2026-0101":"https://drive.google.com/...","V-2026-0102":"https://drive.google.com/...","V-2026-0103":"https://drive.google.com/..."}'
 ```
 
-La API puede estar sujeta a disponibilidad, límites y costos del proveedor. Si solo quieres reproducir el ejercicio sin conectarte, **no hace falta una clave**: ejecuta `--sin-ia`.
+La API puede estar sujeta a disponibilidad, límites y costos del proveedor. Si solo quieres reproducir el flujo sin conectarte, **no hace falta una clave**: ejecuta `--sin-ia`.
 
 ## 6. Cómo ejecutar el pipeline
 
@@ -363,7 +363,7 @@ La suite en `tests/test_pipeline_ia.py` cuenta con **7 pruebas automatizadas** q
 6. `test_pipeline_completo_pdf_y_csv_bi`: generación extremo a extremo de los 3 PDFs y del CSV limpio de Looker Studio.
 7. `test_n8n_actualiza_links_pdf_en_csv`: envío al webhook de n8n y actualización automática de los enlaces de Google Drive en el CSV.
 
-### Lista rápida de verificación de entrega
+### Lista rápida de verificación
 
 - [x] El proceso ETL lee los tres archivos de entrada y realiza el cruce completo sin datos huérfanos.
 - [x] El análisis usa JSON estructurado con Pydantic, reintentos, caché por hash y respaldo `MOCK`.
@@ -384,7 +384,7 @@ La suite en `tests/test_pipeline_ia.py` cuenta con **7 pruebas automatizadas** q
 
 ### Limitaciones conocidas
 
-- El parseo de textos utiliza expresiones regulares y delimitadores adaptados a las fuentes de esta prueba; para documentos libres o escaneados se requeriría OCR o un parser documental más amplio.
+- El parseo de textos utiliza expresiones regulares y delimitadores adaptados a estas fuentes de demostración; para documentos libres o escaneados se requeriría OCR o un parser documental más amplio.
 - El cruce de clientes por nombre normalizado (`strip().lower()`) no contempla errores ortográficos ni variaciones de razón social.
 - Los scores, casos de uso y nivel de complejidad son estimaciones generadas por IA (o ejemplos `MOCK`), no cálculos deterministas certificados.
 
@@ -404,7 +404,7 @@ La suite en `tests/test_pipeline_ia.py` cuenta con **7 pruebas automatizadas** q
 | Los enlaces del PDF son rutas locales `salida/...` | No se configuró n8n ni las variables de URL pública en `.env`. | Configura `N8N_WEBHOOK_URL`, `TALSA_PDF_LINKS_MAP` o `TALSA_PDF_BASE_URL` en `.env`. |
 | PowerShell no permite activar `.venv` | Política de ejecución de scripts de Windows. | Ejecuta `.\.venv\Scripts\python.exe pipeline_ia.py` directamente. |
 
-## 16. Información de entrega
+## 16. Información del proyecto
 
 | Elemento | Estado / enlace |
 |---|---|
@@ -414,6 +414,6 @@ La suite en `tests/test_pipeline_ia.py` cuenta con **7 pruebas automatizadas** q
 | Flujo n8n | [`n8n/workflow_drive_sheets.json`](n8n/workflow_drive_sheets.json) |
 | Ejecución | `python pipeline_ia.py` o `python pipeline_ia.py --sin-ia`. |
 | Pruebas | `python -m pytest -v`. |
-| Datos y material | Fuentes ficticias proporcionadas para la prueba técnica TALSA. |
+| Datos y material | Fuentes ficticias de demostración del proyecto TALSA. |
 
 ---
